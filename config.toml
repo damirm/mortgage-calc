@@ -1,0 +1,17 @@
+[loan]
+start_date = 1970-01-01
+# Day of months for regular payments.
+payment_day = 15
+amount = 100000.0
+months = 12
+rate = 10.0
+# Amount of money that you able to pay (including regular payment and overpayment)
+# monthly_budget = 150000.0
+monthly_budget = 0.0
+default_repayment_goal = "DEBT"
+
+# Example of overpayment (excluding regular payment)
+[[repayment]]
+date = 1970-02-01
+amount = 1000.0
+goal = "DEBT"
