@@ -109,6 +109,7 @@ def payments(loan: Loan, repayments: Dict[datetime.date, Iterator[Repayment]]) -
     # TODO: Handle case when loan.start_date.day is greather than loan.payment_day
     current_period_end = current_period_start.replace(day=loan.payment_day)
 
+    # TODO: Use daily rates.
     monthly_rate = loan.rate/100/12
     common_rate = (1 + monthly_rate)**loan.months
     monthly_payment = loan_amount * monthly_rate * common_rate / (common_rate - 1)
@@ -136,6 +137,7 @@ def payments(loan: Loan, repayments: Dict[datetime.date, Iterator[Repayment]]) -
             RepaymentGoal.PERIOD,
         )
         if current_period_repayment.amount > 0:
+            # TODO: Implement me.
             raise NotImplementedError("Repayment with period type is not implemented yet :-(")
 
         interest_amount = loan_amount * monthly_rate
