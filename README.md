@@ -35,6 +35,8 @@ Loan formulas in Russian
 - https://www.raiffeisen.ru/wiki/formuly-dlya-samostoyatelnogo-rascheta-ipoteki/
 - https://www.vtb.ru/articles/kak-rasschityvaetsya-ipoteka/
 - https://alfabank.ru/get-money/mortgage/articles/kak-rasschitat-ipoteku-samostoyatelno/
+- https://habr.com/ru/articles/456696/
+- https://www.consultant.ru/edu/student/consultation/protsenty_po_kreditu/
 
 ## TODO:
 - Daily rate
