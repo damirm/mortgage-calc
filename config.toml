@@ -1,7 +1,7 @@
 [loan]
-start_date = 1970-01-01
+start_date = 2023-12-01
 # Day of months for regular payments.
-payment_day = 15
+payment_day = 1
 amount = 100000.0
 months = 12
 rate = 10.0

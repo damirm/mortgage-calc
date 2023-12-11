@@ -2,6 +2,10 @@
 
 Allows to easily plan and calculate the loan.
 
+## Requirements
+
+python >= 3.11
+
 ## Quickstart
 
 1. Edit config file, and add special rules
@@ -49,6 +53,10 @@ Loan formulas in Russian
 - https://habr.com/ru/articles/456696/
 - https://www.consultant.ru/edu/student/consultation/protsenty_po_kreditu/
 
+Loan calculators to check if it works correctly:
+- https://www.sravni.ru/kredity/kalkuljator/
+- https://calcus.ru/kreditnyj-kalkulyator
+
 ## TODO:
 - Daily rate
-- Config .ini support
+- Decrease monthly debt repayment type
