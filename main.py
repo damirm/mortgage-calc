@@ -33,7 +33,6 @@ class Repayment:
         raise ValueError(f"Invalid repayment goal: {self.goal}")
 
 
-
 @dataclass
 class Loan:
     start_date: datetime.date
@@ -60,7 +59,7 @@ def add_months(sourcedate, months):
     month = sourcedate.month - 1 + months
     year = sourcedate.year + month // 12
     month = month % 12 + 1
-    day = min(sourcedate.day, calendar.monthrange(year,month)[1])
+    day = min(sourcedate.day, calendar.monthrange(year, month)[1])
     return datetime.date(year, month, day)
 
 
@@ -102,7 +101,6 @@ def iter_repayments(period_start: datetime.date, period_end: datetime.date,
 def payments(loan: Loan, repayments: Dict[datetime.date, Iterator[Repayment]]) -> Generator[Payment, None, None]:
     end_date = add_months(loan.start_date, loan.months)
 
-
     loan_amount = loan.amount
     zero_repayment = Repayment(loan.start_date, 0, RepaymentGoal.NONE)
     current_period_start = loan.start_date
@@ -123,7 +121,8 @@ def payments(loan: Loan, repayments: Dict[datetime.date, Iterator[Repayment]]) -
     default_repayments = list(filter(lambda r: r.amount > 0, (default_repayment,)))
 
     while current_period_end < end_date:
-        period_repayments = list(iter_repayments(current_period_start, current_period_end, repayments, iter(default_repayments)))
+        period_repayments = list(iter_repayments(current_period_start, current_period_end,
+                                 repayments, iter(default_repayments)))
 
         current_debt_repayment = Repayment(
             current_period_start,
@@ -189,7 +188,8 @@ def main(args):
     repayments = group_repayments((Repayment(**repayment) for repayment in config.get("repayment", [])))
 
     cols_padding = " "
-    cols = ("start_date", "end_date", "amount", "interest_amount", "principal_amount", "loan_amount", "repayment_amount")
+    cols = ("start_date", "end_date", "amount", "interest_amount",
+            "principal_amount", "loan_amount", "repayment_amount")
     padded_cols = ["{}{}{}".format(cols_padding, col, cols_padding) for col in cols]
 
     total_interest_amount = 0
