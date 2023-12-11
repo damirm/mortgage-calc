@@ -55,7 +55,7 @@ class Payment:
     repayment_amount: float
 
 
-def add_months(sourcedate, months):
+def add_months(sourcedate: datetime.date, months: int):
     month = sourcedate.month - 1 + months
     year = sourcedate.year + month // 12
     month = month % 12 + 1
@@ -81,9 +81,12 @@ def first_day(date: datetime.date) -> datetime.date:
     return date.replace(day=1)
 
 
-def iter_repayments(period_start: datetime.date, period_end: datetime.date,
-                    repayments: Dict[datetime.date, Iterator[Repayment]],
-                    default_value: Iterator[Repayment]) -> Generator[Repayment, None, None]:
+def iter_repayments(
+    period_start: datetime.date,
+    period_end: datetime.date,
+    repayments: Dict[datetime.date, Iterator[Repayment]],
+    default_value: Iterator[Repayment],
+) -> Generator[Repayment, None, None]:
     period = period_end - period_start
     found = False
     for days in range(period.days):
@@ -98,31 +101,46 @@ def iter_repayments(period_start: datetime.date, period_end: datetime.date,
     return
 
 
-def payments(loan: Loan, repayments: Dict[datetime.date, Iterator[Repayment]]) -> Generator[Payment, None, None]:
+def payments(
+    loan: Loan, repayments: Dict[datetime.date, Iterator[Repayment]]
+) -> Generator[Payment, None, None]:
     end_date = add_months(loan.start_date, loan.months)
 
     loan_amount = loan.amount
     zero_repayment = Repayment(loan.start_date, 0, RepaymentGoal.NONE)
     current_period_start = loan.start_date
-    # TODO: Handle case when loan.start_date.day is greather than loan.payment_day
-    current_period_end = current_period_start.replace(day=loan.payment_day)
+    current_period_end = (
+        current_period_start.replace(day=loan.payment_day)
+        if loan.start_date.day < loan.payment_day
+        else add_months(loan.start_date, 1).replace(day=loan.payment_day)
+    )
 
     # TODO: Use daily rates.
-    monthly_rate = loan.rate/100/12
-    common_rate = (1 + monthly_rate)**loan.months
+    monthly_rate = loan.rate / 100 / 12
+    common_rate = (1 + monthly_rate) ** loan.months
     monthly_payment = loan_amount * monthly_rate * common_rate / (common_rate - 1)
 
-    default_repayment = Repayment(
-        loan.start_date,
-        loan.monthly_budget - monthly_payment,
-        loan.default_repayment_goal,
-    ) if loan.monthly_budget > 0 else zero_repayment
+    default_repayment = (
+        Repayment(
+            loan.start_date,
+            loan.monthly_budget - monthly_payment,
+            loan.default_repayment_goal,
+        )
+        if loan.monthly_budget > 0
+        else zero_repayment
+    )
 
     default_repayments = list(filter(lambda r: r.amount > 0, (default_repayment,)))
 
     while current_period_end < end_date:
-        period_repayments = list(iter_repayments(current_period_start, current_period_end,
-                                 repayments, iter(default_repayments)))
+        period_repayments = list(
+            iter_repayments(
+                current_period_start,
+                current_period_end,
+                repayments,
+                iter(default_repayments),
+            )
+        )
 
         current_debt_repayment = Repayment(
             current_period_start,
@@ -137,7 +155,9 @@ def payments(loan: Loan, repayments: Dict[datetime.date, Iterator[Repayment]]) -
         )
         if current_period_repayment.amount > 0:
             # TODO: Implement me.
-            raise NotImplementedError("Repayment with period type is not implemented yet :-(")
+            raise NotImplementedError(
+                "Repayment with period type is not implemented yet :-("
+            )
 
         interest_amount = loan_amount * monthly_rate
         principal_amount = monthly_payment - interest_amount
@@ -170,7 +190,9 @@ def payments(loan: Loan, repayments: Dict[datetime.date, Iterator[Repayment]]) -
             break
 
 
-def group_repayments(repayments: Iterator[Repayment]) -> Dict[datetime.date, Iterator[Repayment]]:
+def group_repayments(
+    repayments: Iterator[Repayment]
+) -> Dict[datetime.date, Iterator[Repayment]]:
     res = dict()
 
     for repayment in repayments:
@@ -185,11 +207,20 @@ def main(args):
 
     loan = Loan(**config["loan"])
 
-    repayments = group_repayments((Repayment(**repayment) for repayment in config.get("repayment", [])))
+    repayments = group_repayments(
+        (Repayment(**repayment) for repayment in config.get("repayment", []))
+    )
 
     cols_padding = " "
-    cols = ("start_date", "end_date", "amount", "interest_amount",
-            "principal_amount", "loan_amount", "repayment_amount")
+    cols = (
+        "start_date",
+        "end_date",
+        "amount",
+        "interest_amount",
+        "principal_amount",
+        "repayment_amount",
+        "loan_amount",
+    )
     padded_cols = ["{}{}{}".format(cols_padding, col, cols_padding) for col in cols]
 
     total_interest_amount = 0
@@ -198,13 +229,19 @@ def main(args):
         total_interest_amount += payment.interest_amount
 
         values_to_print = (
-            payment.start_date.isoformat(), payment.end_date.isoformat(), format_money(payment.amount),
-            format_money(payment.interest_amount), format_money(payment.principal_amount),
-            format_money(payment.loan_amount), format_money(payment.repayment_amount),
+            payment.start_date.isoformat(),
+            payment.end_date.isoformat(),
+            format_money(payment.amount),
+            format_money(payment.interest_amount),
+            format_money(payment.principal_amount),
+            format_money(payment.repayment_amount),
+            format_money(payment.loan_amount),
         )
 
         if payment.start_date == loan.start_date:
-            headers = (pad_col(val, col) for (col, val) in zip(padded_cols, values_to_print))
+            headers = (
+                pad_col(val, col) for (col, val) in zip(padded_cols, values_to_print)
+            )
             print(" ".join(headers))
 
         print_line(padded_cols, *values_to_print)
