@@ -1,11 +1,14 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, FileType
 import datetime
 import tomllib
 import dataclasses
 import calendar
-from typing import Dict, Generator, Iterator, Tuple, Optional
+from typing import Dict, Generator, Iterator, Tuple, Optional, IO
 from enum import Enum
 import json
+import csv
+import sys
+import os
 
 
 class RepaymentGoal(Enum):
@@ -54,6 +57,7 @@ class Payment:
     principal_amount: float
     loan_amount: float
     repayment_amount: float
+    total_paid_amount: float
 
 
 @dataclasses.dataclass
@@ -73,9 +77,13 @@ def format_money(val: float) -> str:
     return "{:0,.2f}".format(val)
 
 
-def print_line(cols, *vals):
+def print_row(row: str, output: IO):
+    output.write(row + os.linesep)
+
+
+def print_line(cols, output: IO, *vals):
     parts = [pad_col(col, val) for (col, val) in zip(cols, vals)]
-    print(" ".join(parts))
+    print_row(" ".join(parts), output)
 
 
 def pad_col(col: str, value: str) -> str:
@@ -105,18 +113,15 @@ def iter_repayments(
 
 def payments(
     loan: Loan, repayments: Dict[datetime.date, Iterator[Repayment]],
-    until_date: Optional[datetime.date]
 ) -> Generator[Tuple[Payment, PaymentTotal], None, None]:
     end_date = add_months(loan.start_date, loan.months)
 
-    if until_date is not None and end_date > until_date:
-        end_date = until_date
-
     loan_amount = loan.amount
     zero_repayment = Repayment(loan.start_date, 0, RepaymentGoal.NONE)
-    current_period_start = loan.start_date
-    current_period_end = (
-        current_period_start.replace(day=loan.payment_day)
+
+    period_start = loan.start_date
+    period_end = (
+        period_start.replace(day=loan.payment_day)
         if loan.start_date.day < loan.payment_day
         else add_months(loan.start_date, 1).replace(day=loan.payment_day)
     )
@@ -139,24 +144,24 @@ def payments(
 
     default_repayments = list(filter(lambda r: r.amount > 0, (default_repayment,)))
 
-    while current_period_end < end_date:
+    while period_end < end_date:
         period_repayments = list(
             iter_repayments(
-                current_period_start,
-                current_period_end,
+                period_start,
+                period_end,
                 repayments,
                 iter(default_repayments),
             )
         )
 
         current_debt_repayment = Repayment(
-            current_period_start,
+            period_start,
             sum(r.amount for r in filter(lambda r: r.is_debt(), period_repayments)),
             RepaymentGoal.DEBT,
         )
 
         current_period_repayment = Repayment(
-            current_period_start,
+            period_start,
             sum(r.amount for r in filter(lambda r: r.is_period(), period_repayments)),
             RepaymentGoal.PERIOD,
         )
@@ -183,17 +188,18 @@ def payments(
 
         sum_repayment_amount = sum(r.amount for r in period_repayments)
         yield Payment(
-            current_period_start,
-            current_period_end,
+            period_start,
+            period_end,
             monthly_payment,
             interest_amount,
             principal_amount,
             loan_amount,
             sum_repayment_amount,
+            monthly_payment + sum_repayment_amount,
         ), total_payment
 
-        current_period_start = current_period_end
-        current_period_end = add_months(current_period_end, 1)
+        period_start = period_end
+        period_end = add_months(period_end, 1)
 
         if loan_amount <= 0:
             break
@@ -210,7 +216,7 @@ def group_repayments(
     return res
 
 
-def print_table(loan: Loan, gen: Generator[Tuple[Payment, PaymentTotal], None, None]):
+def print_table(loan: Loan, gen: Generator[Tuple[Payment, PaymentTotal], None, None], output: IO):
     cols_padding = " "
     cols = (
         "start_date",
@@ -219,6 +225,7 @@ def print_table(loan: Loan, gen: Generator[Tuple[Payment, PaymentTotal], None, N
         "interest_amount",
         "principal_amount",
         "repayment_amount",
+        "total_paid_amount",
         "loan_amount",
     )
     padded_cols = ["{}{}{}".format(cols_padding, col, cols_padding) for col in cols]
@@ -235,6 +242,7 @@ def print_table(loan: Loan, gen: Generator[Tuple[Payment, PaymentTotal], None, N
             format_money(payment.interest_amount),
             format_money(payment.principal_amount),
             format_money(payment.repayment_amount),
+            format_money(payment.total_paid_amount),
             format_money(payment.loan_amount),
         )
 
@@ -242,12 +250,12 @@ def print_table(loan: Loan, gen: Generator[Tuple[Payment, PaymentTotal], None, N
             headers = (
                 pad_col(val, col) for (col, val) in zip(padded_cols, values_to_print)
             )
-            print(" ".join(headers))
+            print_row(" ".join(headers), output)
 
-        print_line(padded_cols, *values_to_print)
+        print_line(padded_cols, output, *values_to_print)
 
-    print("-" * 10)
-    print("Total interest amount: {}".format(format_money(total_payment.interest_amount)))
+    print_row("-" * 10, output)
+    print_row("Total interest amount: {}".format(format_money(total_payment.interest_amount)), output)
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -259,13 +267,46 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def print_json(gen: Generator[Tuple[Payment, PaymentTotal], None, None]):
+def print_json(gen: Generator[Tuple[Payment, PaymentTotal], None, None], output: IO):
     total_payment = PaymentTotal(0)
     result = []
     for (payment, total) in gen:
         total_payment = total
         result.append(payment)
-    print(json.dumps(dict(payments=result, total=total_payment), cls=EnhancedJSONEncoder))
+    output.write(json.dumps(dict(payments=result, total=total_payment), cls=EnhancedJSONEncoder))
+
+
+def print_csv(gen: Generator[Tuple[Payment, PaymentTotal], None, None], output: IO, with_headers=True):
+    cols = (
+        "start_date",
+        "end_date",
+        "amount",
+        "interest_amount",
+        "principal_amount",
+        "repayment_amount",
+        "total_paid_amount",
+        "loan_amount",
+    )
+
+    writer = csv.writer(output)
+    if with_headers:
+        writer.writerow(cols)
+
+    for (payment, _) in gen:
+        row = (
+            payment.start_date.isoformat(),
+            payment.end_date.isoformat(),
+            payment.amount,
+            payment.interest_amount,
+            payment.principal_amount,
+            payment.repayment_amount,
+            payment.total_paid_amount,
+            payment.loan_amount,
+        )
+        writer.writerow(row)
+
+
+SUPPORTED_FORMATS = ("table", "json", "csv")
 
 
 def main(args):
@@ -277,12 +318,14 @@ def main(args):
         (Repayment(**repayment) for repayment in config.get("repayment", []))
     )
 
-    gen = payments(loan, repayments, args.until)
+    gen = payments(loan, repayments)
 
     if args.format == "table":
-        print_table(loan, gen)
+        print_table(loan, gen, args.output)
     elif args.format == "json":
-        print_json(gen)
+        print_json(gen, args.output)
+    elif args.format == "csv":
+        print_csv(gen, args.output, with_headers=True)
     else:
         raise ValueError(f"Unknown format: {args.format}")
 
@@ -290,8 +333,8 @@ def main(args):
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument("--config", help="Path to config file", default="config.toml")
-    parser.add_argument("--until", type=lambda d: datetime.datetime.strptime(d, '%Y-%m-%d').date(), default=None)
-    parser.add_argument("--format", type=str, default="table")
+    parser.add_argument("--format", type=str, default="table", choices=SUPPORTED_FORMATS)
+    parser.add_argument("--output", type=FileType('w'), default=sys.stdout)
     return parser.parse_args()
 
 

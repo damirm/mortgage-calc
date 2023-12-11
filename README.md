@@ -29,6 +29,17 @@ Result:
 Total interest amount: 5,113.48
 ```
 
+You can print output in different formats by providing "--format" option:
+```
+$ python main.py --format json
+{"payments": [{"start_date": "1970-01-01", "end_date": "1970-01-15", "amount": 8791.58872300099, "interest_amount": 833.3333333333334, "principal_amount": 7958.255389667657, "loan_amount": 92041.74461033235, "repayment_amount": 0}, {"start_date": "1970-01-15", "end_date": "1970-02-15", "amount": 8791.58872300099, "interest_amount": 767.0145384194362, "principal_amount": 8024.574184581554, "loan_amount": 83017.1704257508, "repayment_amount": 1000.0}, {"start_date": "1970-02-15", "end_date": "1970-03-15", "amount": 8791.58872300099, "interest_amount": 691.8097535479233, "principal_amount": 8099.7789694530675, "loan_amount": 74917.39145629773, "repayment_amount": 0}, {"start_date": "1970-03-15", "end_date": "1970-04-15", "amount": 8791.58872300099, "interest_amount": 624.3115954691477, "principal_amount": 8167.277127531843, "loan_amount": 66750.11432876589, "repayment_amount": 0}, {"start_date": "1970-04-15", "end_date": "1970-05-15", "amount": 8791.58872300099, "interest_amount": 556.2509527397158, "principal_amount": 8235.337770261274, "loan_amount": 53514.776558504615, "repayment_amount": 5000.0}, {"start_date": "1970-05-15", "end_date": "1970-06-15", "amount": 8791.58872300099, "interest_amount": 445.9564713208718, "principal_amount": 8345.63225168012, "loan_amount": 45169.1443068245, "repayment_amount": 0}, {"start_date": "1970-06-15", "end_date": "1970-07-15", "amount": 8791.58872300099, "interest_amount": 376.40953589020415, "principal_amount": 8415.179187110785, "loan_amount": 36753.965119713714, "repayment_amount": 0}, {"start_date": "1970-07-15", "end_date": "1970-08-15", "amount": 8791.58872300099, "interest_amount": 306.28304266428097, "principal_amount": 8485.305680336709, "loan_amount": 28268.659439377006, "repayment_amount": 0}, {"start_date": "1970-08-15", "end_date": "1970-09-15", "amount": 8791.58872300099, "interest_amount": 235.5721619948084, "principal_amount": 8556.016561006181, "loan_amount": 19712.642878370825, "repayment_amount": 0}, {"start_date": "1970-09-15", "end_date": "1970-10-15", "amount": 8791.58872300099, "interest_amount": 164.27202398642353, "principal_amount": 8627.316699014567, "loan_amount": 11085.326179356258, "repayment_amount": 0}, {"start_date": "1970-10-15", "end_date": "1970-11-15", "amount": 8791.58872300099, "interest_amount": 92.37771816130214, "principal_amount": 8699.211004839688, "loan_amount": 2386.11517451657, "repayment_amount": 0}, {"start_date": "1970-11-15", "end_date": "1970-12-15", "amount": 2405.9994676375413, "interest_amount": 19.884293120971414, "principal_amount": 2386.11517451657, "loan_amount": 0, "repayment_amount": 0}], "total": {"interest_amount": 5113.4754206484195}}%
+```
+
+Also you can write shedule directly to the file:
+```
+$ python main.py --format csv --output mortgage-schedule.csv
+```
+
 ## References
 Loan formulas in Russian
 - https://mortgage-calculator.ru/%D1%84%D0%BE%D1%80%D0%BC%D1%83%D0%BB%D0%B0-%D1%80%D0%B0%D1%81%D1%87%D0%B5%D1%82%D0%B0-%D0%B8%D0%BF%D0%BE%D1%82%D0%B5%D0%BA%D0%B8/
@@ -40,3 +51,4 @@ Loan formulas in Russian
 
 ## TODO:
 - Daily rate
+- Config .ini support
