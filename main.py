@@ -1,10 +1,11 @@
 from argparse import ArgumentParser
 import datetime
 import tomllib
-from dataclasses import dataclass
+import dataclasses
 import calendar
-from typing import Dict, Generator, Iterator
+from typing import Dict, Generator, Iterator, Tuple, Optional
 from enum import Enum
+import json
 
 
 class RepaymentGoal(Enum):
@@ -13,7 +14,7 @@ class RepaymentGoal(Enum):
     NONE = 100
 
 
-@dataclass
+@dataclasses.dataclass
 class Repayment:
     date: datetime.date
     amount: float
@@ -33,7 +34,7 @@ class Repayment:
         raise ValueError(f"Invalid repayment goal: {self.goal}")
 
 
-@dataclass
+@dataclasses.dataclass
 class Loan:
     start_date: datetime.date
     amount: float
@@ -44,7 +45,7 @@ class Loan:
     default_repayment_goal: RepaymentGoal
 
 
-@dataclass
+@dataclasses.dataclass
 class Payment:
     start_date: datetime.date
     end_date: datetime.date
@@ -53,6 +54,11 @@ class Payment:
     principal_amount: float
     loan_amount: float
     repayment_amount: float
+
+
+@dataclasses.dataclass
+class PaymentTotal:
+    interest_amount: float
 
 
 def add_months(sourcedate: datetime.date, months: int):
@@ -77,10 +83,6 @@ def pad_col(col: str, value: str) -> str:
     return "{value:^{padding}}".format(value=value, padding=padding)
 
 
-def first_day(date: datetime.date) -> datetime.date:
-    return date.replace(day=1)
-
-
 def iter_repayments(
     period_start: datetime.date,
     period_end: datetime.date,
@@ -102,9 +104,13 @@ def iter_repayments(
 
 
 def payments(
-    loan: Loan, repayments: Dict[datetime.date, Iterator[Repayment]]
-) -> Generator[Payment, None, None]:
+    loan: Loan, repayments: Dict[datetime.date, Iterator[Repayment]],
+    until_date: Optional[datetime.date]
+) -> Generator[Tuple[Payment, PaymentTotal], None, None]:
     end_date = add_months(loan.start_date, loan.months)
+
+    if until_date is not None and end_date > until_date:
+        end_date = until_date
 
     loan_amount = loan.amount
     zero_repayment = Repayment(loan.start_date, 0, RepaymentGoal.NONE)
@@ -114,6 +120,7 @@ def payments(
         if loan.start_date.day < loan.payment_day
         else add_months(loan.start_date, 1).replace(day=loan.payment_day)
     )
+    total_payment = PaymentTotal(0)
 
     # TODO: Use daily rates.
     monthly_rate = loan.rate / 100 / 12
@@ -162,6 +169,8 @@ def payments(
         interest_amount = loan_amount * monthly_rate
         principal_amount = monthly_payment - interest_amount
 
+        total_payment.interest_amount += interest_amount
+
         if current_debt_repayment.amount > 0:
             loan_amount -= current_debt_repayment.amount
 
@@ -181,7 +190,7 @@ def payments(
             principal_amount,
             loan_amount,
             sum_repayment_amount,
-        )
+        ), total_payment
 
         current_period_start = current_period_end
         current_period_end = add_months(current_period_end, 1)
@@ -201,16 +210,7 @@ def group_repayments(
     return res
 
 
-def main(args):
-    with open(args.config, "rb") as f:
-        config = tomllib.load(f)
-
-    loan = Loan(**config["loan"])
-
-    repayments = group_repayments(
-        (Repayment(**repayment) for repayment in config.get("repayment", []))
-    )
-
+def print_table(loan: Loan, gen: Generator[Tuple[Payment, PaymentTotal], None, None]):
     cols_padding = " "
     cols = (
         "start_date",
@@ -223,10 +223,10 @@ def main(args):
     )
     padded_cols = ["{}{}{}".format(cols_padding, col, cols_padding) for col in cols]
 
-    total_interest_amount = 0
+    total_payment = PaymentTotal(0)
 
-    for payment in payments(loan, repayments):
-        total_interest_amount += payment.interest_amount
+    for (payment, total) in gen:
+        total_payment = total
 
         values_to_print = (
             payment.start_date.isoformat(),
@@ -247,12 +247,51 @@ def main(args):
         print_line(padded_cols, *values_to_print)
 
     print("-" * 10)
-    print("Total interest amount: {:.2f}".format(total_interest_amount))
+    print("Total interest amount: {}".format(format_money(total_payment.interest_amount)))
+
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        elif isinstance(o, datetime.date):
+            return o.isoformat()
+        return super().default(o)
+
+
+def print_json(gen: Generator[Tuple[Payment, PaymentTotal], None, None]):
+    total_payment = PaymentTotal(0)
+    result = []
+    for (payment, total) in gen:
+        total_payment = total
+        result.append(payment)
+    print(json.dumps(dict(payments=result, total=total_payment), cls=EnhancedJSONEncoder))
+
+
+def main(args):
+    with open(args.config, "rb") as f:
+        config = tomllib.load(f)
+
+    loan = Loan(**config["loan"])
+    repayments = group_repayments(
+        (Repayment(**repayment) for repayment in config.get("repayment", []))
+    )
+
+    gen = payments(loan, repayments, args.until)
+
+    if args.format == "table":
+        print_table(loan, gen)
+    elif args.format == "json":
+        print_json(gen)
+    else:
+        raise ValueError(f"Unknown format: {args.format}")
 
 
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument("--config", help="Path to config file", default="config.toml")
+    parser.add_argument("--until", type=lambda d: datetime.datetime.strptime(d, '%Y-%m-%d').date(), default=None)
+    parser.add_argument("--format", type=str, default="table")
     return parser.parse_args()
 
 

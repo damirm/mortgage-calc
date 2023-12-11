@@ -15,3 +15,8 @@ default_repayment_goal = "DEBT"
 date = 1970-02-01
 amount = 1000.0
 goal = "DEBT"
+
+[[repayment]]
+date = 1970-05-10
+amount = 5000.0
+goal = "DEBT"
