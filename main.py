@@ -130,12 +130,12 @@ def payments(
     # TODO: Use daily rates.
     monthly_rate = loan.rate / 100 / 12
     common_rate = (1 + monthly_rate) ** loan.months
-    monthly_payment = loan_amount * monthly_rate * common_rate / (common_rate - 1)
+    period_payment = loan_amount * monthly_rate * common_rate / (common_rate - 1)
 
     default_repayment = (
         Repayment(
             loan.start_date,
-            loan.monthly_budget - monthly_payment,
+            loan.monthly_budget - period_payment,
             loan.default_repayment_goal,
         )
         if loan.monthly_budget > 0
@@ -145,6 +145,17 @@ def payments(
     default_repayments = list(filter(lambda r: r.amount > 0, (default_repayment,)))
 
     while period_end < end_date:
+        # Montly schema.
+        interest_amount = loan_amount * monthly_rate
+
+        # Daily schema.
+        # TODO: Use correct days count in year (calculate for each period).
+        # daily_rate = (loan.rate / 100) / 365 * (period_end - period_start).days
+        # interest_amount = loan_amount * daily_rate
+
+        principal_amount = period_payment - interest_amount
+        total_payment.interest_amount += interest_amount
+
         period_repayments = list(
             iter_repayments(
                 period_start,
@@ -171,11 +182,6 @@ def payments(
                 "Repayment with period type is not implemented yet :-("
             )
 
-        interest_amount = loan_amount * monthly_rate
-        principal_amount = monthly_payment - interest_amount
-
-        total_payment.interest_amount += interest_amount
-
         if current_debt_repayment.amount > 0:
             loan_amount -= current_debt_repayment.amount
 
@@ -183,19 +189,20 @@ def payments(
 
         if loan_amount <= 0.0:
             principal_amount += loan_amount
-            monthly_payment = interest_amount + principal_amount
+            period_payment = interest_amount + principal_amount
             loan_amount = 0
 
         sum_repayment_amount = sum(r.amount for r in period_repayments)
+
         yield Payment(
             period_start,
             period_end,
-            monthly_payment,
+            period_payment,
             interest_amount,
             principal_amount,
             loan_amount,
             sum_repayment_amount,
-            monthly_payment + sum_repayment_amount,
+            period_payment + sum_repayment_amount,
         ), total_payment
 
         period_start = period_end
@@ -224,6 +231,7 @@ def print_table(loan: Loan, gen: Generator[Tuple[Payment, PaymentTotal], None, N
         "amount",
         "interest_amount",
         "principal_amount",
+        "principal_total_amount",
         "repayment_amount",
         "total_paid_amount",
         "loan_amount",
@@ -241,6 +249,7 @@ def print_table(loan: Loan, gen: Generator[Tuple[Payment, PaymentTotal], None, N
             format_money(payment.amount),
             format_money(payment.interest_amount),
             format_money(payment.principal_amount),
+            format_money(payment.principal_amount + payment.repayment_amount),
             format_money(payment.repayment_amount),
             format_money(payment.total_paid_amount),
             format_money(payment.loan_amount),

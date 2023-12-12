@@ -56,6 +56,7 @@ Loan formulas in Russian
 Loan calculators to check if it works correctly:
 - https://www.sravni.ru/kredity/kalkuljator/
 - https://calcus.ru/kreditnyj-kalkulyator
+- https://creditcalcul.ru/
 
 ## TODO:
 - Daily rate
