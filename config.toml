@@ -1,22 +1,22 @@
 [loan]
-start_date = 2023-12-01
+start_date = 2015-09-01
 # Day of months for regular payments.
 payment_day = 1
-amount = 100000.0
-months = 12
-rate = 10.0
+amount = 1000000.0
+months = 60
+rate = 12.0
 # Amount of money that you able to pay (including regular payment and overpayment)
 # monthly_budget = 150000.0
 monthly_budget = 0.0
-default_repayment_goal = "DEBT"
+default_repayment_goal = "MANDATORY_PAYMENT"
 
 # Example of overpayment (excluding regular payment)
-[[repayment]]
-date = 1970-02-01
-amount = 1000.0
-goal = "DEBT"
+# [[repayment]]
+# date = 2024-02-01
+# amount = 10000.0
+# goal = "MANDATORY_PAYMENT"
 
-[[repayment]]
-date = 1970-05-10
-amount = 5000.0
-goal = "DEBT"
+# [[repayment]]
+# date = 1970-05-10
+# amount = 5000.0
+# goal = "MANDATORY_PAYMENT"

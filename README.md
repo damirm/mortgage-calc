@@ -52,11 +52,15 @@ Loan formulas in Russian
 - https://alfabank.ru/get-money/mortgage/articles/kak-rasschitat-ipoteku-samostoyatelno/
 - https://habr.com/ru/articles/456696/
 - https://www.consultant.ru/edu/student/consultation/protsenty_po_kreditu/
+- https://www.gazprombank.ru/pro-finance/credit/kak-rasschitat-annuitetnyj-platezh/
+- https://www.mtsbank.ru/articles/annuitetniy-platezh/
+- https://moezhile.ru/kreditovanie/raschet-annuiteta.html
 
 Loan calculators to check if it works correctly:
 - https://www.sravni.ru/kredity/kalkuljator/
 - https://calcus.ru/kreditnyj-kalkulyator
 - https://creditcalcul.ru/
+- https://journal.tinkoff.ru/mortgage-plan-calc/
 
 ## TODO:
 - Daily rate
