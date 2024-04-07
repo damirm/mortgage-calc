@@ -44,6 +44,47 @@ Also you can write shedule directly to the file:
 $ python main.py --format csv --output mortgage-schedule.csv
 ```
 
+# Ascii graph
+
+You can visualize it in terminal using https://github.com/guptarohit/asciigraph
+```shell
+❯ ./ascii.sh
+ 22244 ┤╭─╮
+ 21503 ┤│ ╰──╮
+ 20761 ┤│    ╰──╮
+ 20020 ┤│       ╰──╮
+ 19279 ┤│          ╰──╮
+ 18537 ┤│             ╰──╮
+ 17796 ┤│                ╰──╮
+ 17054 ┤│                   ╰───╮
+ 16313 ┤│                       ╰───╮
+ 15571 ┤│                           ╰──╮
+ 14830 ┤│                              ╰───╮
+ 14088 ┤│                                  ╰────╮
+ 13347 ┤│                                       ╰───╮
+ 12605 ┤╭╮                                          ╰────╮
+ 11864 ┤│╰────╮                                          ╰────╮
+ 11122 ┤│     ╰───╮                                           ╰─────
+ 10381 ┤│╭╮       ╰─────╮╭╮
+  9639 ┤│╯╰──╮╭╮        ╰╯╰───╮
+  8898 ┤│    ╰╯╰────╮╭       ╰───────╮
+  8156 ┤│           ╰╯╰──╮╭──╮        ╰──────╮   ╭╮
+  7415 ┤│                ╰╯  ╰───────╮       ╰───╯╰─╮╭╮
+  6673 ┤│                            ╰────────╮╭╮   ╰╯╰───────╮
+  5932 ┤│                                     ╰╯╰╮╭─────╮╭╮   ╰─────
+  5190 ┤│                                        ╰╯     ╰╯╰─────────
+  4449 ┤│
+  3707 ┤│
+  2966 ┤│
+  2224 ┤│
+  1483 ┤│
+   741 ┤│
+     0 ┼╯
+                                  Mortgage
+
+                   ■ Mandatory   ■ Interest   ■ Principal
+```
+
 ## References
 Loan formulas in Russian
 - https://mortgage-calculator.ru/%D1%84%D0%BE%D1%80%D0%BC%D1%83%D0%BB%D0%B0-%D1%80%D0%B0%D1%81%D1%87%D0%B5%D1%82%D0%B0-%D0%B8%D0%BF%D0%BE%D1%82%D0%B5%D0%BA%D0%B8/
@@ -56,13 +97,14 @@ Loan formulas in Russian
 - https://www.mtsbank.ru/articles/annuitetniy-platezh/
 - https://moezhile.ru/kreditovanie/raschet-annuiteta.html
 - https://fincult.info/calc/loan/#amount
+- https://fincalculator.ru/kreditnyj-kalkulyator
+- https://mobile-testing.ru/loancalc/rachet_dosrochnogo_pogashenia/
+- https://journal.tinkoff.ru/pro/zato-svoya/9-falsestart/
+- https://alfabank.ru/help/articles/credit/kak-rasschitat-kredit/
+- https://www.pochtabank.ru/articles/kak-rasschitat-protsenty-po-kreditu
 
 Loan calculators to check if it works correctly:
 - https://www.sravni.ru/kredity/kalkuljator/
 - https://calcus.ru/kreditnyj-kalkulyator
 - https://creditcalcul.ru/
 - https://journal.tinkoff.ru/mortgage-plan-calc/
-
-## TODO:
-- Daily rate
-- Decrease monthly debt repayment type
