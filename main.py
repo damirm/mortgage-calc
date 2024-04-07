@@ -185,12 +185,10 @@ def payments(
 
     end_date = add_months(loan.start_date, loan.months)
     while period_end <= end_date:
-        # TODO: Use daily rates.
         monthly_rate = year_rate_to_monthly(loan.rate)
         period_payment = annuity_payment(loan_amount, monthly_rate, loan.months)
-
-        # Montly schema.
         interest_amount = calc_interest_amount(loan, loan_amount, period_start, period_end)
+
         principal_amount = period_payment - interest_amount
         total_payment.interest_amount += interest_amount
 
