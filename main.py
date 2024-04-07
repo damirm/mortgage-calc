@@ -21,6 +21,7 @@ class Repayment:
     date: datetime.date
     amount: float
     goal: RepaymentGoal
+    regular_payment_included: bool
 
     def is_mandatory_payment(self) -> bool:
         return self.__is_goal_of(RepaymentGoal.MANDATORY_PAYMENT)
@@ -100,6 +101,7 @@ def iter_repayments(
     period_end: datetime.date,
     repayments: Dict[datetime.date, Iterator[Repayment]],
     default_value: Iterator[Repayment],
+    period_payment: float,
 ) -> Generator[Repayment, None, None]:
     period = period_end - period_start
     found = False
@@ -108,20 +110,25 @@ def iter_repayments(
         if date in repayments:
             found = True
             for repayment in repayments[date]:
+                if repayment.regular_payment_included:
+                    repayment.amount -= period_payment
                 yield repayment
     if not found:
         for repayment in default_value:
+            if repayment.regular_payment_included:
+                repayment.amount -= period_payment
             yield repayment
     return
 
 
 def get_default_repayments(loan: Loan, period_payment: float) -> List[Repayment]:
-    zero_repayment = Repayment(loan.start_date, 0, loan.default_repayment_goal)
+    zero_repayment = Repayment(loan.start_date, 0, loan.default_repayment_goal, False)
     default_repayment = (
         Repayment(
             loan.start_date,
             loan.monthly_budget - period_payment,
             loan.default_repayment_goal,
+            False,
         )
         if loan.monthly_budget > 0
         else zero_repayment
@@ -131,14 +138,13 @@ def get_default_repayments(loan: Loan, period_payment: float) -> List[Repayment]
 
 def annuity_payment(amount: float, monthly_rate: float, months: int):
     ratio = (monthly_rate * (1 + monthly_rate) ** months) / (((1 + monthly_rate) ** months) - 1)
-    return ratio * amount
+    return amount * ratio
 
 
 def calc_interest_amount(
     loan: Loan, loan_amount: float, period_start: datetime.date, period_end: datetime.date
 ) -> float:
-    # return loan_amount * monthly_rate
-    return loan_amount * (loan.rate / 100) * (period_end - period_start).days / days_in_year(period_start.year)
+    return (loan_amount * (loan.rate / 100) * (period_end - period_start).days) / days_in_year(period_start.year)
 
 
 def get_first_period_end(loan: Loan) -> datetime.date:
@@ -159,10 +165,6 @@ def payments(
 ) -> Generator[Tuple[Payment, PaymentTotal], None, None]:
     loan_amount = loan.amount
 
-    # TODO: Use daily rates.
-    monthly_rate = year_rate_to_monthly(loan.rate)
-    period_payment = annuity_payment(loan_amount, monthly_rate, loan.months)
-
     period_start = loan.start_date
     period_end = get_first_period_end(loan)
     total_payment = PaymentTotal(0)
@@ -181,49 +183,34 @@ def payments(
         total_payment,
     )
 
-    default_repayments = get_default_repayments(loan, period_payment)
-
     end_date = add_months(loan.start_date, loan.months)
     while period_end <= end_date:
+        # TODO: Use daily rates.
+        monthly_rate = year_rate_to_monthly(loan.rate)
+        period_payment = annuity_payment(loan_amount, monthly_rate, loan.months)
+
         # Montly schema.
         interest_amount = calc_interest_amount(loan, loan_amount, period_start, period_end)
-
-        # Daily schema.
-        # TODO: Use correct days count in year (calculate for each period).
-        # daily_rate = (loan.rate / 100) / 365 * (period_end - period_start).days
-        # interest_amount = loan_amount * daily_rate
-
         principal_amount = period_payment - interest_amount
         total_payment.interest_amount += interest_amount
 
+        default_repayments = get_default_repayments(loan, period_payment)
         period_repayments = list(
-            iter_repayments(
-                period_start,
-                period_end,
-                repayments,
-                iter(default_repayments),
-            )
+            iter_repayments(period_start, period_end, repayments, iter(default_repayments), period_payment)
         )
 
-        current_mandatory_repayment = Repayment(
-            period_start,
-            sum(r.amount for r in filter(lambda r: r.is_mandatory_payment(), period_repayments)),
-            RepaymentGoal.MANDATORY_PAYMENT,
+        current_mandatory_repayment = sum(
+            r.amount for r in filter(lambda r: r.is_mandatory_payment(), period_repayments)
         )
-        if current_mandatory_repayment.amount > 0:
-            loan_amount -= current_mandatory_repayment.amount
+        if current_mandatory_repayment > 0:
+            loan_amount -= current_mandatory_repayment
             # TODO: Is it correct?
-            period_payment = annuity_payment(loan_amount, monthly_rate, loan.months)
-            default_repayments = get_default_repayments(loan, period_payment)
+            # period_payment = annuity_payment(loan_amount, monthly_rate, loan.months)
 
-        current_period_repayment = Repayment(
-            period_start,
-            sum(r.amount for r in filter(lambda r: r.is_period(), period_repayments)),
-            RepaymentGoal.PERIOD,
-        )
-        if current_period_repayment.amount > 0:
+        current_period_repayment = sum(r.amount for r in filter(lambda r: r.is_period(), period_repayments))
+        if current_period_repayment > 0:
             # TODO: Is it enough? Is it correct?
-            loan_amount -= current_period_repayment.amount
+            loan_amount -= current_period_repayment
 
         loan_amount -= principal_amount
 
@@ -233,6 +220,7 @@ def payments(
             loan_amount = 0
 
         sum_repayment_amount = sum(r.amount for r in period_repayments)
+        total_payment_in_period = period_payment + sum_repayment_amount
 
         yield (
             Payment(
@@ -243,7 +231,7 @@ def payments(
                 max(0, principal_amount),
                 loan_amount,
                 sum_repayment_amount,
-                period_payment + sum_repayment_amount,
+                total_payment_in_period,
             ),
             total_payment,
         )

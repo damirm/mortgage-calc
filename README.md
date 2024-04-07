@@ -55,6 +55,7 @@ Loan formulas in Russian
 - https://www.gazprombank.ru/pro-finance/credit/kak-rasschitat-annuitetnyj-platezh/
 - https://www.mtsbank.ru/articles/annuitetniy-platezh/
 - https://moezhile.ru/kreditovanie/raschet-annuiteta.html
+- https://fincult.info/calc/loan/#amount
 
 Loan calculators to check if it works correctly:
 - https://www.sravni.ru/kredity/kalkuljator/
