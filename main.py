@@ -22,6 +22,7 @@ class Repayment:
     amount: float
     goal: RepaymentGoal
     regular_payment_included: bool
+    override_monthly_budget: bool
 
     def is_mandatory_payment(self) -> bool:
         return self.__is_goal_of(RepaymentGoal.MANDATORY_PAYMENT)
@@ -102,6 +103,7 @@ def iter_repayments(
     repayments: Dict[datetime.date, Iterator[Repayment]],
     default_value: Iterator[Repayment],
     period_payment: float,
+    loan: Loan,
 ) -> Generator[Repayment, None, None]:
     period = period_end - period_start
     found = False
@@ -110,26 +112,21 @@ def iter_repayments(
         if date in repayments:
             found = True
             for repayment in repayments[date]:
+                if repayment.override_monthly_budget:
+                    loan.monthly_budget = repayment.amount
                 if repayment.regular_payment_included:
                     repayment.amount -= period_payment
                 yield repayment
     if not found:
         for repayment in default_value:
-            if repayment.regular_payment_included:
-                repayment.amount -= period_payment
             yield repayment
     return
 
 
 def get_default_repayments(loan: Loan, period_payment: float) -> List[Repayment]:
-    zero_repayment = Repayment(loan.start_date, 0, loan.default_repayment_goal, False)
+    zero_repayment = Repayment(loan.start_date, 0, loan.default_repayment_goal, False, False)
     default_repayment = (
-        Repayment(
-            loan.start_date,
-            loan.monthly_budget - period_payment,
-            loan.default_repayment_goal,
-            False,
-        )
+        Repayment(loan.start_date, loan.monthly_budget - period_payment, loan.default_repayment_goal, False, False)
         if loan.monthly_budget > 0
         else zero_repayment
     )
@@ -194,7 +191,7 @@ def payments(
 
         default_repayments = get_default_repayments(loan, period_payment)
         period_repayments = list(
-            iter_repayments(period_start, period_end, repayments, iter(default_repayments), period_payment)
+            iter_repayments(period_start, period_end, repayments, iter(default_repayments), period_payment, loan)
         )
 
         current_mandatory_repayment = sum(
@@ -318,7 +315,7 @@ def print_json(gen: Generator[Tuple[Payment, PaymentTotal], None, None], output:
 def print_csv(
     gen: Generator[Tuple[Payment, PaymentTotal], None, None],
     output: IO,
-    with_headers=True,
+    with_headers: bool = True,
 ):
     cols = (
         "start_date",
