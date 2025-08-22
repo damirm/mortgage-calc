@@ -1,14 +1,15 @@
-from argparse import ArgumentParser, FileType
-import datetime
-import tomllib
-import dataclasses
 import calendar
-from typing import Dict, Generator, Iterator, Tuple, IO, List
-from enum import Enum
-import json
 import csv
-import sys
+import dataclasses
+import datetime
+import json
 import os
+import sys
+from argparse import ArgumentParser, FileType
+from enum import Enum
+from typing import IO, Dict, Generator, Iterator, List, Tuple
+
+import tomllib
 
 
 class RepaymentGoal(Enum):
